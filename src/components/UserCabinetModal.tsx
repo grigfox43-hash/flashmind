@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, LogOut, Mail, Calendar, X, Database, Loader2, Server } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, LogOut, Mail, Calendar, X, Loader2 } from 'lucide-react';
 import { appDB } from '../db/database';
 
 export interface UserProfile {
@@ -16,7 +16,7 @@ interface UserCabinetModalProps {
   currentUser: UserProfile | null;
   onLogin: (user: UserProfile) => void;
   onLogout: () => void;
-  onOpenCloudDbModal?: () => void;
+  initialMode?: 'login' | 'register';
   totalCards: number;
   readinessScore: number;
   streakDays: number;
@@ -28,17 +28,21 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
   currentUser,
   onLogin,
   onLogout,
-  onOpenCloudDbModal,
+  initialMode = 'login',
   totalCards,
   readinessScore,
   streakDays,
 }) => {
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(initialMode === 'register');
   const [emailInput, setEmailInput] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [passInput, setPassInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsRegisterMode(initialMode === 'register');
+  }, [initialMode, isOpen]);
 
   if (!isOpen) return null;
 
@@ -55,7 +59,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
 
       if (isRegisterMode) {
         if (existing) {
-          throw new Error('Пользователь с таким email уже зарегистрирован в базе данных.');
+          throw new Error('Пользователь с таким email уже зарегистрирован.');
         }
 
         const name = nameInput.trim() || email.split('@')[0] || 'Студент';
@@ -75,7 +79,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
           onLogin(existing);
           onClose();
         } else {
-          // Auto create user record in DB if first time logging in with email
+          // Auto create user profile if first time logging in with email
           const name = nameInput.trim() || email.split('@')[0] || 'Студент';
           const newUser: UserProfile = {
             id: `usr_${Date.now()}`,
@@ -89,7 +93,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
         }
       }
     } catch (err: any) {
-      setAuthError(err.message || 'Ошибка подключения к базе данных.');
+      setAuthError(err.message || 'Ошибка авторизации. Проверьте введенные данные.');
     } finally {
       setIsSubmitting(false);
     }
@@ -120,11 +124,10 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
             </div>
             <div>
               <h3 className="text-xl font-bold text-white">
-                {currentUser ? 'Личный кабинет пользователя' : isRegisterMode ? 'Регистрация в БД' : 'Вход в аккаунт'}
+                {currentUser ? 'Личный кабинет' : isRegisterMode ? 'Регистрация' : 'Вход в аккаунт'}
               </h3>
-              <p className="text-[11px] text-emerald-400 flex items-center gap-1 mt-0.5">
-                <Database className="w-3 h-3" />
-                <span>База данных IndexedDB подключена</span>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Интеллектуальное обучение FlashMind
               </p>
             </div>
           </div>
@@ -145,7 +148,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
                 <h4 className="text-lg font-bold text-white flex items-center gap-2">
                   <span>{currentUser.name}</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Pro Student
+                    Активный студент
                   </span>
                 </h4>
                 <p className="text-xs text-slate-400 flex items-center gap-1.5">
@@ -154,7 +157,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
                 </p>
                 <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
-                  <span>Запись в БД от: {currentUser.joinedAt}</span>
+                  <span>Дата регистрации: {currentUser.joinedAt}</span>
                 </p>
               </div>
             </div>
@@ -176,17 +179,6 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
                 <div className="text-[11px] text-slate-400">Серия учебы</div>
               </div>
             </div>
-
-            {/* Cloud DB Quick Trigger Button inside User Cabinet */}
-            {onOpenCloudDbModal && (
-              <button
-                onClick={onOpenCloudDbModal}
-                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Server className="w-4 h-4 text-indigo-400" />
-                <span>Настройка базы данных на хостинге</span>
-              </button>
-            )}
 
             {/* Logout Button */}
             <button
@@ -252,7 +244,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
               {isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : isRegisterMode ? (
-                'Сохранить пользователя в Базу Данных'
+                'Создать аккаунт'
               ) : (
                 'Войти в личный кабинет'
               )}
@@ -264,7 +256,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
                 onClick={() => setIsRegisterMode(!isRegisterMode)}
                 className="text-xs text-indigo-400 hover:underline cursor-pointer"
               >
-                {isRegisterMode ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться в БД'}
+                {isRegisterMode ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
               </button>
             </div>
           </form>

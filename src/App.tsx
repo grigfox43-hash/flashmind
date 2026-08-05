@@ -8,6 +8,7 @@ import { DeckManager } from './components/DeckManager';
 import { ApiKeyModal } from './components/ApiKeyModal';
 import { CloudDbModal } from './components/CloudDbModal';
 import { UserCabinetModal, type UserProfile } from './components/UserCabinetModal';
+import { LandingPage } from './components/LandingPage';
 
 import type { Deck, Flashcard, ReviewRating } from './types/flashcard';
 import { calculateExamReadiness } from './utils/analytics';
@@ -21,18 +22,18 @@ const STORAGE_KEY_STREAK = 'flashmind_study_streak';
 export function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'import' | 'review' | 'exam' | 'decks'>('dashboard');
 
-  // Decks state backed by IndexedDB Database & Cloud Sync
+  // Decks state backed by Database
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(() => cloudDB.isCloudConfigured());
 
-  // User profile state (null when logged out!)
+  // User profile state (null when guest / logged out)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_USER);
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return null; // Null when logged out!
+    return null;
   });
 
   // Gemini API Key state
@@ -49,8 +50,9 @@ export function App() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isUserCabinetOpen, setIsUserCabinetOpen] = useState(false);
   const [isCloudDbModalOpen, setIsCloudDbModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
-  // 1. Initial Database Loading (Cloud DB priority if configured, else IndexedDB)
+  // 1. Initial Database Loading
   useEffect(() => {
     async function loadDatabase() {
       try {
@@ -68,7 +70,7 @@ export function App() {
           setDecks(dbDecks);
         }
       } catch (err) {
-        console.error('Error reading from Database:', err);
+        console.error('Error reading from storage:', err);
       } finally {
         setIsDbLoaded(true);
       }
@@ -76,22 +78,22 @@ export function App() {
     loadDatabase();
   }, [currentUser?.id]);
 
-  // 2. Database Auto-sync on decks update (Local DB + Cloud Hosting DB)
+  // 2. Database Auto-sync on decks update
   useEffect(() => {
     if (isDbLoaded) {
       appDB.saveAllDecks(decks).catch((err) => {
-        console.error('Error persisting to IndexedDB:', err);
+        console.error('Error persisting decks:', err);
       });
 
       if (cloudDB.isCloudConfigured()) {
         cloudDB.syncDecksToCloud(decks, currentUser?.id || 'default').catch((err) => {
-          console.error('Error syncing to Cloud DB:', err);
+          console.error('Error syncing decks:', err);
         });
       }
     }
   }, [decks, isDbLoaded, currentUser?.id]);
 
-  // Sync user profile to LocalStorage & Cloud DB
+  // Sync user profile to LocalStorage
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(currentUser));
@@ -112,6 +114,16 @@ export function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem(STORAGE_KEY_USER);
+  };
+
+  const handleOpenLogin = () => {
+    setAuthModalMode('login');
+    setIsUserCabinetOpen(true);
+  };
+
+  const handleOpenRegister = () => {
+    setAuthModalMode('register');
+    setIsUserCabinetOpen(true);
   };
 
   // Handlers for deck management
@@ -233,6 +245,31 @@ export function App() {
   const readiness = calculateExamReadiness(decks);
   const totalCards = decks.flatMap((d) => d.cards).length;
 
+  // Unauthenticated Landing View
+  if (!currentUser) {
+    return (
+      <>
+        <LandingPage
+          onOpenLogin={handleOpenLogin}
+          onOpenRegister={handleOpenRegister}
+        />
+
+        <UserCabinetModal
+          isOpen={isUserCabinetOpen}
+          onClose={() => setIsUserCabinetOpen(false)}
+          currentUser={currentUser}
+          onLogin={(user) => setCurrentUser(user)}
+          onLogout={handleLogout}
+          initialMode={authModalMode}
+          totalCards={0}
+          readinessScore={0}
+          streakDays={0}
+        />
+      </>
+    );
+  }
+
+  // Authenticated Main Application View
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
       {/* Top Navbar */}
@@ -336,10 +373,7 @@ export function App() {
         currentUser={currentUser}
         onLogin={(user) => setCurrentUser(user)}
         onLogout={handleLogout}
-        onOpenCloudDbModal={() => {
-          setIsUserCabinetOpen(false);
-          setIsCloudDbModalOpen(true);
-        }}
+        initialMode={authModalMode}
         totalCards={totalCards}
         readinessScore={readiness.overallScore}
         streakDays={streakDays}
