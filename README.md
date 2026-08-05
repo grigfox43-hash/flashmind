@@ -1,32 +1,30 @@
-# React + TypeScript + Vite
+# FlashMind AI — Система Интервального Повторения (SM-2 SRS)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Deployed-emerald?style=for-the-badge&logo=vercel)](https://flashmind.vercel.app)
+[![React 19](https://img.shields.io/badge/React-19.0-indigo?style=for-the-badge&logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-cyan?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 
-Currently, two official plugins are available:
+**FlashMind AI** — это веб-приложение для подготовки к экзаменам, тестированиям и изучению любых предметов по алгоритму SuperMemo-2 (SM-2) с возможностью автоматической генерации карточек из PDF и конспектов лекций.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🚀 Основные возможности:
+- 🧠 **Алгоритм SuperMemo-2 (SM-2)**: Расчет оптимальных интервалов повторений, множителей легкой памяти (`easeFactor`) и расписания.
+- 📄 **Генератор ИИ карточек из PDF и Текста**: Клиентский парсинг PDF через `pdfjs-dist` + ИИ эвристический парсер NLP и поддержка Google Gemini API.
+- 🎓 **Имитатор Экзаменов**: Запуск тестовых сессий с расчетом индекса готовности (0–100%) и детальной аналитикой слабых тем.
+- 🗄️ **База Данных**: Локальная браузерная IndexedDB + возможность 1-click подключения облачной базы данных PostgreSQL (Vercel Postgres / Supabase).
+- 📱 **Адаптивный интерфейс**: Оптимизированный дизайн для мобильных устройств с плавающим меню навигации.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## 🛠️ Запуск локально:
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 📦 Сборка для продакшена:
+```bash
+npm run build
+```
