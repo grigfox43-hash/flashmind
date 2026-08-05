@@ -231,45 +231,66 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {decks.map((deck) => {
-            const dueCount = deck.cards.filter((c) => c.dueDate <= new Date().toISOString().split('T')[0]).length;
-            return (
-              <div
-                key={deck.id}
-                onClick={() => onNavigate('review')}
-                className={`p-6 rounded-3xl bg-slate-900/70 border border-slate-800 hover:border-indigo-500/40 transition-all cursor-pointer space-y-4 group`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">
-                    {deck.category}
-                  </span>
-                  {dueCount > 0 && (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white">
-                      {dueCount} к повторению
+        {decks.length === 0 ? (
+          <div className="p-8 sm:p-12 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mx-auto">
+              <Upload className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xl font-bold text-white">У вас пока нет созданных колод</h4>
+              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                Загрузите свой первый конспект лекции или PDF-файл — ИИ мгновенно сформирует флеш-карточки для обучения.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate('import')}
+              className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors shadow-lg shadow-indigo-600/30 inline-flex items-center gap-2 cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Создать первую колоду через ИИ</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {decks.map((deck) => {
+              const dueCount = deck.cards.filter((c) => c.dueDate <= new Date().toISOString().split('T')[0]).length;
+              return (
+                <div
+                  key={deck.id}
+                  onClick={() => onNavigate('review')}
+                  className={`p-6 rounded-3xl bg-slate-900/70 border border-slate-800 hover:border-indigo-500/40 transition-all cursor-pointer space-y-4 group`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">
+                      {deck.category}
                     </span>
-                  )}
-                </div>
+                    {dueCount > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white">
+                        {dueCount} к повторению
+                      </span>
+                    )}
+                  </div>
 
-                <div>
-                  <h4 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors">
-                    {deck.title}
-                  </h4>
-                  <p className="text-xs text-slate-400 line-clamp-2 mt-1">
-                    {deck.description || 'Учебные карточки'}
-                  </p>
-                </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors">
+                      {deck.title}
+                    </h4>
+                    <p className="text-xs text-slate-400 line-clamp-2 mt-1">
+                      {deck.description || 'Учебные карточки'}
+                    </p>
+                  </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-3">
-                  <span>Всего карточек: {deck.cards.length}</span>
-                  <span className="font-semibold text-indigo-400 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
-                    Учить <ArrowRight className="w-3 h-3" />
-                  </span>
+                  <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-3">
+                    <span>Всего карточек: {deck.cards.length}</span>
+                    <span className="font-semibold text-indigo-400 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                      Учить <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
