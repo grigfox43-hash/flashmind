@@ -1,6 +1,5 @@
 import type { Deck, Flashcard, ExamResult } from '../types/flashcard';
 import type { UserProfile } from '../components/UserCabinetModal';
-import { INITIAL_DECKS } from '../data/sampleDecks';
 
 const DB_NAME = 'FlashMindDatabase';
 const DB_VERSION = 1;
@@ -98,8 +97,7 @@ class AppDatabase {
         const rawDecks: Deck[] = decksRequest.result || [];
         
         if (rawDecks.length === 0) {
-          // Return initial preloaded sample decks if database is fresh
-          resolve(INITIAL_DECKS);
+          resolve([]);
           return;
         }
 

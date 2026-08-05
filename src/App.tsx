@@ -10,7 +10,6 @@ import { CloudDbModal } from './components/CloudDbModal';
 import { UserCabinetModal, type UserProfile } from './components/UserCabinetModal';
 
 import type { Deck, Flashcard, ReviewRating } from './types/flashcard';
-import { INITIAL_DECKS } from './data/sampleDecks';
 import { calculateExamReadiness } from './utils/analytics';
 import { appDB } from './db/database';
 import { cloudDB } from './db/cloudDatabase';
@@ -23,7 +22,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'import' | 'review' | 'exam' | 'decks'>('dashboard');
 
   // Decks state backed by IndexedDB Database & Cloud Sync
-  const [decks, setDecks] = useState<Deck[]>(INITIAL_DECKS);
+  const [decks, setDecks] = useState<Deck[]>([]);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(() => cloudDB.isCloudConfigured());
 
@@ -43,7 +42,7 @@ export function App() {
 
   // Study Streak State
   const [streakDays] = useState<number>(() => {
-    return Number(localStorage.getItem(STORAGE_KEY_STREAK)) || 3;
+    return Number(localStorage.getItem(STORAGE_KEY_STREAK)) || 0;
   });
 
   // Modals state
