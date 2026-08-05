@@ -349,37 +349,44 @@ export const MaterialImport: React.FC<MaterialImportProps> = ({
             </div>
 
             {/* Model switch */}
-            <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800 text-xs">
-              <div>
-                <span className="font-semibold text-slate-200 block">
-                  {useGemini && apiKey ? 'Google Gemini 1.5 Flash' : 'Native High-Speed NLP'}
-                </span>
-                <span className="text-slate-400 text-[11px]">
-                  {useGemini && apiKey
-                    ? 'Глубокая LLM генерация по API ключу'
-                    : 'Мгновенное офлайн-извлечение понятий'}
-                </span>
+            <div className="flex flex-col gap-2 bg-slate-900 p-3.5 rounded-xl border border-slate-800 text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-slate-200 block">
+                    {useGemini && apiKey ? 'Google Gemini 1.5 Flash' : 'Native High-Speed NLP (Офлайн ИИ)'}
+                  </span>
+                  <span className="text-slate-400 text-[11px]">
+                    {useGemini && apiKey
+                      ? 'Глубокая LLM генерация с перефразированием'
+                      : 'Мгновенное извлечение терминов без интервала и ключей'}
+                  </span>
+                </div>
+
+                {apiKey ? (
+                  <button
+                    onClick={() => setUseGemini(!useGemini)}
+                    className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all cursor-pointer ${
+                      useGemini
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {useGemini ? 'Gemini Вкл' : 'Использовать Gemini'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={onOpenApiKeyModal}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 font-medium text-[11px] cursor-pointer"
+                  >
+                    + API Ключ
+                  </button>
+                )}
               </div>
 
-              {apiKey ? (
-                <button
-                  onClick={() => setUseGemini(!useGemini)}
-                  className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${
-                    useGemini
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : 'bg-slate-800 text-slate-400'
-                  }`}
-                >
-                  {useGemini ? 'Gemini Вкл' : 'Использовать Gemini'}
-                </button>
-              ) : (
-                <button
-                  onClick={onOpenApiKeyModal}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 font-medium text-[11px]"
-                >
-                  + API Ключ
-                </button>
-              )}
+              {/* Explanatory Note */}
+              <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-800/60 leading-relaxed">
+                💡 <strong className="text-slate-300">Подсказка:</strong> По умолчанию карточки создаются мгновенно и бесплатно через встроенный <em>Native NLP</em>. Подключать API-ключ Google Gemini нужно только если требуется ИИ-перефразирование сложного текста.
+              </div>
             </div>
           </div>
         </div>
