@@ -59,7 +59,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
 
       if (isRegisterMode) {
         if (existing) {
-          throw new Error('Пользователь с таким email уже зарегистрирован.');
+          throw new Error('Пользователь с таким email уже зарегистрирован. Перейдите во вкладку «Войти».');
         }
 
         const name = nameInput.trim() || email.split('@')[0] || 'Студент';
@@ -74,23 +74,13 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
         onLogin(user);
         onClose();
       } else {
-        // Sign in mode
-        if (existing) {
-          onLogin(existing);
-          onClose();
-        } else {
-          // Auto create user profile if first time logging in with email
-          const name = nameInput.trim() || email.split('@')[0] || 'Студент';
-          const newUser: UserProfile = {
-            id: `usr_${Date.now()}`,
-            name,
-            email,
-            joinedAt: new Date().toLocaleDateString('ru-RU'),
-          };
-          await appDB.saveUser(newUser);
-          onLogin(newUser);
-          onClose();
+        // Sign in mode: Strict check that user profile exists in database
+        if (!existing) {
+          throw new Error('Пользователь с таким email не найден. Нажмите «Зарегистрироваться» ниже.');
         }
+
+        onLogin(existing);
+        onClose();
       }
     } catch (err: any) {
       setAuthError(err.message || 'Ошибка авторизации. Проверьте введенные данные.');
