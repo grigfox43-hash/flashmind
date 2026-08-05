@@ -2,17 +2,130 @@
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 antialiased min-h-screen selection:bg-indigo-500 selection:text-white font-sans;
-    background-image: 
-      radial-gradient(at 15% 15%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
-      radial-gradient(at 85% 85%, rgba(168, 85, 247, 0.12) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
-    background-attachment: fixed;
+    @apply bg-slate-950 text-slate-100 antialiased min-h-screen selection:bg-indigo-500 selection:text-white font-sans overflow-x-hidden;
+    background-color: #030712;
   }
 
   button, [role="button"], a {
     cursor: pointer !important;
   }
+}
+
+/* GPU-Accelerated Background Ambient Glow Orbs */
+.bg-ambient-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ambient-orb-1 {
+  position: absolute;
+  top: -10%;
+  left: 15%;
+  width: 55vw;
+  height: 55vw;
+  max-width: 650px;
+  max-height: 650px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.08) 50%, transparent 70%);
+  filter: blur(60px);
+  will-change: transform;
+  animation: floatOrb1 22s ease-in-out infinite alternate;
+}
+
+.ambient-orb-2 {
+  position: absolute;
+  bottom: -10%;
+  right: 10%;
+  width: 60vw;
+  height: 60vw;
+  max-width: 700px;
+  max-height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, rgba(16, 185, 129, 0.06) 50%, transparent 70%);
+  filter: blur(70px);
+  will-change: transform;
+  animation: floatOrb2 26s ease-in-out infinite alternate;
+}
+
+.ambient-orb-3 {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  width: 45vw;
+  height: 45vw;
+  max-width: 500px;
+  max-height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, rgba(99, 102, 241, 0.05) 50%, transparent 70%);
+  filter: blur(80px);
+  will-change: transform;
+  animation: floatOrb3 30s ease-in-out infinite alternate;
+}
+
+@keyframes floatOrb1 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(60px, 40px, 0) scale(1.08); }
+  100% { transform: translate3d(-30px, 80px, 0) scale(0.95); }
+}
+
+@keyframes floatOrb2 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-80px, -50px, 0) scale(1.1); }
+  100% { transform: translate3d(40px, -30px, 0) scale(0.92); }
+}
+
+@keyframes floatOrb3 {
+  0% { transform: translate3d(-50%, -50%, 0) scale(1); }
+  50% { transform: translate3d(-40%, -60%, 0) scale(1.15); }
+  100% { transform: translate3d(-60%, -40%, 0) scale(0.9); }
+}
+
+/* Modal Popup Smooth Entrance Animations */
+.animate-backdrop-in {
+  animation: backdropFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-pop {
+  animation: modalPopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(12px); }
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale3d(0.92, 0.92, 1) translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale3d(1, 1, 1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+/* Button Interactive Effects (No Text Scaling, 60fps GPU smoothness) */
+button, .btn-interactive {
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+button:active, .btn-interactive:active {
+  transform: translate3d(0, 1px, 0);
+}
+
+.btn-glow-indigo:hover {
+  box-shadow: 0 0 20px -2px rgba(99, 102, 241, 0.45);
+}
+
+.btn-glow-emerald:hover {
+  box-shadow: 0 0 20px -2px rgba(16, 185, 129, 0.45);
 }
 
 /* Custom 3D Card Flip styles */
@@ -65,12 +178,4 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.glow-indigo {
-  box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.3);
-}
-
-.glow-emerald {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3);
 }

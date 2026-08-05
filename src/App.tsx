@@ -271,7 +271,14 @@ export function App() {
 
   // Authenticated Main Application View
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white relative overflow-hidden">
+      {/* Background Ambient Glow Orbs */}
+      <div className="bg-ambient-container">
+        <div className="ambient-orb-1" />
+        <div className="ambient-orb-2" />
+        <div className="ambient-orb-3" />
+      </div>
+
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
