@@ -329,22 +329,37 @@ export const MaterialImport: React.FC<MaterialImportProps> = ({
               <span>Настройки ИИ</span>
             </label>
 
-            <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
-              <span className="text-xs text-slate-300">Количество карточек:</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
               <div className="flex items-center gap-2">
-                {[5, 8, 12, 15].map((cnt) => (
-                  <button
-                    key={cnt}
-                    onClick={() => setCardCount(cnt)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      cardCount === cnt
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {cnt}
-                  </button>
-                ))}
+                <span className="text-xs text-slate-300 font-medium">Количество карточек (от 1 до 30):</span>
+                <span className="px-2.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-xs font-bold font-mono border border-indigo-500/30">
+                  {cardCount} шт.
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Range Slider 1 to 30 */}
+                <input
+                  type="range"
+                  min={1}
+                  max={30}
+                  value={cardCount}
+                  onChange={(e) => setCardCount(Number(e.target.value))}
+                  className="w-28 sm:w-36 accent-indigo-500 cursor-pointer"
+                />
+
+                {/* Direct Number Input 1 to 30 */}
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={cardCount}
+                  onChange={(e) => {
+                    const val = Math.min(30, Math.max(1, Number(e.target.value) || 1));
+                    setCardCount(val);
+                  }}
+                  className="w-14 rounded-lg bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-center text-white focus:outline-none focus:border-indigo-500 font-mono font-bold"
+                />
               </div>
             </div>
 
