@@ -68,7 +68,7 @@ export function calculateExamReadiness(decks: Deck[]): ExamReadinessOverview {
   const masteryRate = Math.round((masteredCount / totalCards) * 100);
   
   const totalReviews = totalSuccesses + totalFails;
-  const retentionRate = totalReviews > 0 ? Math.round((totalSuccesses / totalReviews) * 100) : 50;
+  const retentionRate = totalReviews > 0 ? Math.round((totalSuccesses / totalReviews) * 100) : 100;
 
   const cardWeightScore = (masteredCount * 1.0 + learningCount * 0.55 + newCount * 0.1) / totalCards;
   const overduePenalty = Math.max(0, 1 - dueTodayCount / totalCards);
@@ -80,8 +80,18 @@ export function calculateExamReadiness(decks: Deck[]): ExamReadinessOverview {
   const weakTopics: WeakTopic[] = Object.entries(topicMap)
     .map(([topicTag, data]) => {
       const topicTotalReviews = data.successes + data.fails;
-      const accuracy = topicTotalReviews > 0 ? Math.round((data.successes / topicTotalReviews) * 100) : 0;
-      
+      if (topicTotalReviews === 0) {
+        return {
+          topicTag,
+          totalCards: data.total,
+          failCount: 0,
+          successCount: 0,
+          accuracy: 100,
+          urgency: 'low' as const,
+        };
+      }
+
+      const accuracy = Math.round((data.successes / topicTotalReviews) * 100);
       let urgency: 'high' | 'medium' | 'low' = 'low';
       if (accuracy < 60 || data.fails >= 3) urgency = 'high';
       else if (accuracy < 80 || data.fails >= 1) urgency = 'medium';
@@ -98,22 +108,25 @@ export function calculateExamReadiness(decks: Deck[]): ExamReadinessOverview {
     .filter((t) => t.urgency !== 'low' || t.failCount > 0)
     .sort((a, b) => {
       if (a.urgency === 'high' && b.urgency !== 'high') return -1;
-      if (b.urgency === 'high' && a.urgency !== 'high') return 1;
+      if (a.urgency !== 'high' && b.urgency === 'high') return 1;
       return a.accuracy - b.accuracy;
     });
 
-  let readinessLabel = 'Низкая готовность';
-  let readinessColor = 'text-rose-400';
+  let readinessLabel = 'Начальный уровень';
+  let readinessColor = 'text-amber-400';
 
   if (overallScore >= 85) {
     readinessLabel = 'Отличная готовность к экзамену!';
     readinessColor = 'text-emerald-400';
   } else if (overallScore >= 65) {
-    readinessLabel = 'Хорошая готовность';
+    readinessLabel = 'Хороший уровень знаний';
     readinessColor = 'text-indigo-400';
   } else if (overallScore >= 45) {
-    readinessLabel = 'Умеренная готовность';
+    readinessLabel = 'Требуется систематическое повторение';
     readinessColor = 'text-amber-400';
+  } else {
+    readinessLabel = 'Низкий уровень готовности';
+    readinessColor = 'text-rose-400';
   }
 
   return {

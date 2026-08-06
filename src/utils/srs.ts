@@ -49,10 +49,14 @@ export function calculateSM2(
     repetition += 1;
   }
 
-  // Calculate next due date
+  // Calculate next due date using local date offset
   const nextDate = new Date();
   nextDate.setDate(nextDate.getDate() + interval);
-  const dueDate = nextDate.toISOString().split('T')[0];
+
+  const yyyy = nextDate.getFullYear();
+  const mm = String(nextDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(nextDate.getDate()).padStart(2, '0');
+  const dueDate = `${yyyy}-${mm}-${dd}`;
 
   return {
     interval,
@@ -71,19 +75,31 @@ export function getCardStatus(card: Flashcard): CardStatus {
 
 export function isCardDueToday(card: Flashcard): boolean {
   if (!card.dueDate) return true;
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const today = `${yyyy}-${mm}-${dd}`;
   return card.dueDate <= today;
 }
 
 export function formatDueDateLabel(dueDate: string): string {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${yyyy}-${mm}-${dd}`;
 
-  const diffTime = due.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (!dueDate || dueDate <= todayStr) return 'Сегодня';
+
+  const [y1, m1, d1] = todayStr.split('-').map(Number);
+  const [y2, m2, d2] = dueDate.split('-').map(Number);
+
+  const date1 = new Date(y1, m1 - 1, d1);
+  const date2 = new Date(y2, m2 - 1, d2);
+
+  const diffTime = date2.getTime() - date1.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays <= 0) return 'Сегодня';
   if (diffDays === 1) return 'Завтра';
