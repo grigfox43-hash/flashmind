@@ -9,6 +9,8 @@ import { ApiKeyModal } from './components/ApiKeyModal';
 import { CloudDbModal } from './components/CloudDbModal';
 import { UserCabinetModal, type UserProfile } from './components/UserCabinetModal';
 import { LandingPage } from './components/LandingPage';
+import { Sparkles } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 import type { Deck, Flashcard, ReviewRating } from './types/flashcard';
 import { calculateExamReadiness } from './utils/analytics';
@@ -51,6 +53,7 @@ export function App() {
   const [isUserCabinetOpen, setIsUserCabinetOpen] = useState(false);
   const [isCloudDbModalOpen, setIsCloudDbModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [welcomeUser, setWelcomeUser] = useState<UserProfile | null>(null);
 
   // 1. Initial Database Loading
   useEffect(() => {
@@ -121,10 +124,25 @@ export function App() {
     localStorage.setItem(STORAGE_KEY_API_KEY, key);
   };
 
-  const handleLogin = (user: UserProfile) => {
+  const handleLogin = (user: UserProfile, isNewUser?: boolean) => {
     setDecks([]);
     setIsDbLoaded(false);
     setCurrentUser(user);
+
+    if (isNewUser) {
+      setWelcomeUser(user);
+      try {
+        confetti({
+          particleCount: 130,
+          spread: 85,
+          origin: { y: 0.5 },
+        });
+      } catch (e) {}
+
+      setTimeout(() => {
+        setWelcomeUser(null);
+      }, 2300);
+    }
   };
 
   const handleLogout = () => {
@@ -403,6 +421,36 @@ export function App() {
         readinessScore={readiness.overallScore}
         streakDays={streakDays}
       />
+
+      {/* Celebration Welcome Entrance Overlay */}
+      {welcomeUser && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-backdrop-in cursor-default">
+          <div className="bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950/90 border border-indigo-500/40 rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl animate-welcome-splash animate-sparkle-glow relative overflow-hidden">
+            <div className="absolute -top-20 -left-20 w-40 h-40 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-emerald-400 text-white flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/40 animate-bounce">
+              <Sparkles className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 inline-flex items-center gap-1.5">
+                🎉 Регистрация успешная!
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight pt-2">
+                Добро пожаловать, <span className="bg-gradient-to-r from-indigo-300 via-purple-300 to-emerald-300 bg-clip-text text-transparent">{welcomeUser.name}</span>!
+              </h2>
+              <p className="text-xs text-slate-300 max-w-xs mx-auto leading-relaxed">
+                Ваше личное ИИ-пространство создано в базе данных.
+              </p>
+            </div>
+
+            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+              <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 rounded-full animate-[welcomeProgress_2.3s_easeInOut_forwards]" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

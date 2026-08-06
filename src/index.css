@@ -93,6 +93,49 @@
   will-change: transform, opacity;
 }
 
+/* Welcome Splash Entrance Keyframes */
+.animate-welcome-splash {
+  animation: welcomeSplash 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-sparkle-glow {
+  animation: sparkleGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes welcomeSplash {
+  0% {
+    opacity: 0;
+    transform: scale3d(0.85, 0.85, 1) translateY(20px);
+    filter: blur(8px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale3d(1.03, 1.03, 1) translateY(-4px);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes sparkleGlow {
+  0% {
+    box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.5);
+    border-color: rgba(99, 102, 241, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 50px 10px rgba(168, 85, 247, 0.6);
+    border-color: rgba(168, 85, 247, 0.7);
+  }
+}
+
+@keyframes welcomeProgress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
 @keyframes backdropFadeIn {
   from { opacity: 0; backdrop-filter: blur(0px); }
   to { opacity: 1; backdrop-filter: blur(12px); }

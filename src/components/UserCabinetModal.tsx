@@ -15,7 +15,7 @@ interface UserCabinetModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: UserProfile | null;
-  onLogin: (user: UserProfile) => void;
+  onLogin: (user: UserProfile, isNewUser?: boolean) => void;
   onLogout: () => void;
   initialMode?: 'login' | 'register';
   totalCards: number;
@@ -77,7 +77,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
         if (cloudDB.isCloudConfigured()) {
           await cloudDB.syncUserToCloud(user);
         }
-        onLogin(user);
+        onLogin(user, true);
         onClose();
       } else {
         // Sign in mode: Strict check that user profile exists in database
