@@ -62,11 +62,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 </p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 pt-2 sm:pt-0">
+              {/* Action Buttons (Stacked Vertically) */}
+              <div className="flex flex-col gap-2.5 w-full sm:w-52 shrink-0 pt-2 sm:pt-0">
                 <button
                   onClick={() => onNavigate('review')}
-                  className="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 border border-indigo-400/30 transition-all flex items-center justify-center gap-2.5 whitespace-nowrap cursor-pointer"
+                  className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 border border-indigo-400/30 transition-all flex items-center justify-center gap-2.5 whitespace-nowrap cursor-pointer"
                 >
                   <BookOpen className="w-4 h-4 shrink-0" />
                   <span>Повторить</span>
@@ -83,7 +83,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
                 <button
                   onClick={() => onNavigate('import')}
-                  className="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/80 hover:border-indigo-500/50 text-slate-100 font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/80 hover:border-indigo-500/50 text-slate-100 font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
                   <span>Создать через ИИ</span>
