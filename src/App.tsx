@@ -55,22 +55,32 @@ export function App() {
   // 1. Initial Database Loading
   useEffect(() => {
     async function loadDatabase() {
+      if (!currentUser?.id) {
+        setDecks([]);
+        setIsDbLoaded(true);
+        return;
+      }
+
       try {
+        setIsDbLoaded(false);
+        let loadedDecks: Deck[] = [];
+
         if (cloudDB.isCloudConfigured()) {
-          const cloudDecks = await cloudDB.fetchDecksFromCloud(currentUser?.id || 'default');
-          if (cloudDecks && cloudDecks.length > 0) {
-            setDecks(cloudDecks);
-            setIsDbLoaded(true);
-            return;
+          const cloudDecks = await cloudDB.fetchDecksFromCloud(currentUser.id);
+          if (cloudDecks !== null) {
+            loadedDecks = cloudDecks;
+          }
+        } else {
+          const dbDecks = await appDB.getAllDecks(currentUser.id);
+          if (dbDecks) {
+            loadedDecks = dbDecks;
           }
         }
 
-        const dbDecks = await appDB.getAllDecks(currentUser?.id || 'default');
-        if (dbDecks && dbDecks.length > 0) {
-          setDecks(dbDecks);
-        }
+        setDecks(loadedDecks);
       } catch (err) {
         console.error('Error reading from storage:', err);
+        setDecks([]);
       } finally {
         setIsDbLoaded(true);
       }
@@ -80,13 +90,13 @@ export function App() {
 
   // 2. Database Auto-sync on decks update
   useEffect(() => {
-    if (isDbLoaded) {
+    if (isDbLoaded && currentUser?.id) {
       appDB.saveAllDecks(decks).catch((err) => {
         console.error('Error persisting decks:', err);
       });
 
       if (cloudDB.isCloudConfigured()) {
-        cloudDB.syncDecksToCloud(decks, currentUser?.id || 'default').catch((err) => {
+        cloudDB.syncDecksToCloud(decks, currentUser.id).catch((err) => {
           console.error('Error syncing decks:', err);
         });
       }
@@ -111,7 +121,15 @@ export function App() {
     localStorage.setItem(STORAGE_KEY_API_KEY, key);
   };
 
+  const handleLogin = (user: UserProfile) => {
+    setDecks([]);
+    setIsDbLoaded(false);
+    setCurrentUser(user);
+  };
+
   const handleLogout = () => {
+    setDecks([]);
+    setIsDbLoaded(false);
     setCurrentUser(null);
     localStorage.removeItem(STORAGE_KEY_USER);
   };
@@ -378,7 +396,7 @@ export function App() {
         isOpen={isUserCabinetOpen}
         onClose={() => setIsUserCabinetOpen(false)}
         currentUser={currentUser}
-        onLogin={(user) => setCurrentUser(user)}
+        onLogin={handleLogin}
         onLogout={handleLogout}
         initialMode={authModalMode}
         totalCards={totalCards}

@@ -36,8 +36,10 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === 'GET') {
       const { userId } = req.query;
-      const query = userId ? { userId: String(userId) } : {};
-      const decks = await decksCollection.find(query).toArray();
+      if (!userId || userId === 'null' || userId === 'undefined') {
+        return res.status(200).json([]);
+      }
+      const decks = await decksCollection.find({ userId: String(userId) }).toArray();
       return res.status(200).json(decks);
     }
 
@@ -47,16 +49,23 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'decks array is required' });
       }
 
-      const uid = userId || 'default';
+      if (!userId || userId === 'null' || userId === 'undefined') {
+        return res.status(400).json({ error: 'userId is required' });
+      }
 
-      // Bulk upsert decks in MongoDB Atlas
+      // If user has no decks, do not overwrite other users' decks
+      if (decks.length === 0) {
+        return res.status(200).json({ success: true, count: 0 });
+      }
+
+      // Bulk upsert decks in MongoDB Atlas bound strictly to userId
       for (const deck of decks) {
         await decksCollection.updateOne(
-          { id: deck.id },
+          { id: deck.id, userId: String(userId) },
           {
             $set: {
               ...deck,
-              userId: uid,
+              userId: String(userId),
               updatedAt: new Date().toISOString(),
             },
           },
