@@ -10,6 +10,7 @@ import {
   BookOpen,
   Flame,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import type { Deck } from '../types/flashcard';
 import { calculateExamReadiness, type ExamReadinessOverview } from '../utils/analytics';
@@ -62,21 +63,30 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 pt-2 sm:pt-0">
                 <button
                   onClick={() => onNavigate('review')}
-                  className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+                  className="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 border border-indigo-400/30 transition-all flex items-center justify-center gap-2.5 whitespace-nowrap cursor-pointer"
                 >
-                  <BookOpen className="w-4 h-4" />
-                  <span>Повторить ({readiness.dueTodayCount})</span>
+                  <BookOpen className="w-4 h-4 shrink-0" />
+                  <span>Повторить</span>
+                  {readiness.dueTodayCount > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-black leading-none">
+                      {readiness.dueTodayCount}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-white/10 text-slate-200 text-[11px] font-bold leading-none">
+                      0
+                    </span>
+                  )}
                 </button>
 
                 <button
                   onClick={() => onNavigate('import')}
-                  className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                  className="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/80 hover:border-indigo-500/50 text-slate-100 font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                 >
-                  <Upload className="w-4 h-4" />
-                  <span>+ ИИ Карточки</span>
+                  <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+                  <span>Создать через ИИ</span>
                 </button>
               </div>
             </div>
