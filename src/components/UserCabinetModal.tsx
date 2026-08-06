@@ -48,7 +48,6 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
   const [pendingVerification, setPendingVerification] = useState<{
     user: UserProfile;
     activationUrl: string;
-    dispatchError?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -93,27 +92,21 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
         localStorage.setItem(`flashmind_pending_${token}`, JSON.stringify(pendingRecord));
         localStorage.setItem(`flashmind_pending_email_${email}`, JSON.stringify(pendingRecord));
 
-        let dispatchErrorMsg = '';
-
         // Dispatch real email via serverless API
-        try {
-          const res = await fetch('/api/send-verification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, name, activationUrl }),
-          });
-          const data = await res.json();
-          if (!data.success && data.error) {
-            dispatchErrorMsg = data.error;
-          }
-        } catch (e: any) {
-          console.warn('Send verification API call error:', e);
+        const res = await fetch('/api/send-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, name, activationUrl }),
+        });
+        
+        const data = await res.json();
+        if (!data.success && data.error) {
+          throw new Error(data.error);
         }
 
         setPendingVerification({
           user,
           activationUrl,
-          dispatchError: dispatchErrorMsg,
         });
       } else {
         // Sign in mode: Strict check that user profile exists in database
@@ -146,13 +139,13 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
       });
       const data = await res.json();
       if (!data.success && data.error) {
-        setPendingVerification((prev) => (prev ? { ...prev, dispatchError: data.error } : null));
+        setAuthError(data.error);
       } else {
         setResendSuccess(true);
         setTimeout(() => setResendSuccess(false), 3000);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setAuthError(e.message || 'Ошибка повторной отправки.');
     } finally {
       setIsResending(false);
     }
