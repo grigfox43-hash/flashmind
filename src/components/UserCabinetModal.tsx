@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, LogOut, Mail, Calendar, X, Loader2 } from 'lucide-react';
 import { appDB } from '../db/database';
+import { cloudDB } from '../db/cloudDatabase';
 
 export interface UserProfile {
   id: string;
@@ -71,6 +72,9 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
         };
 
         await appDB.saveUser(user);
+        if (cloudDB.isCloudConfigured()) {
+          await cloudDB.syncUserToCloud(user);
+        }
         onLogin(user);
         onClose();
       } else {

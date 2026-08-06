@@ -17,11 +17,25 @@ export const defaultCloudSettings: CloudDBSettings = {
 
 class CloudDatabaseService {
   private getSettings(): CloudDBSettings {
+    // 1. Check Vite Environment Variables (Vercel Environment Variables)
+    const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || (import.meta as any).env?.VITE_POSTGRES_URL || '';
+    const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_POSTGRES_KEY || '';
+
+    // 2. Check LocalStorage settings
+    let savedSettings: CloudDBSettings = defaultCloudSettings;
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CLOUD_SETTINGS);
-      if (saved) return JSON.parse(saved);
+      if (saved) savedSettings = JSON.parse(saved);
     } catch (e) {}
-    return defaultCloudSettings;
+
+    const finalUrl = (savedSettings.supabaseUrl || envUrl || '').trim();
+    const finalKey = (savedSettings.supabaseAnonKey || envKey || '').trim();
+
+    return {
+      supabaseUrl: finalUrl,
+      supabaseAnonKey: finalKey,
+      isEnabled: savedSettings.isEnabled || Boolean(finalUrl && finalKey),
+    };
   }
 
   saveSettings(settings: CloudDBSettings): void {
@@ -30,7 +44,7 @@ class CloudDatabaseService {
 
   isCloudConfigured(): boolean {
     const s = this.getSettings();
-    return s.isEnabled && Boolean(s.supabaseUrl) && Boolean(s.supabaseAnonKey);
+    return Boolean(s.supabaseUrl) && Boolean(s.supabaseAnonKey);
   }
 
   /**
