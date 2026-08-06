@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Mail, Calendar, X, Loader2, MailCheck, ExternalLink, Copy, Check } from 'lucide-react';
+import { User, LogOut, Mail, Calendar, X, Loader2, MailCheck, ExternalLink, RefreshCw } from 'lucide-react';
 import { appDB } from '../db/database';
 import { cloudDB } from '../db/cloudDatabase';
 
@@ -40,7 +40,8 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
   const [passInput, setPassInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   // Verification Pending Screen State
   const [pendingVerification, setPendingVerification] = useState<{
@@ -90,6 +91,17 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
         localStorage.setItem(`flashmind_pending_${token}`, JSON.stringify(pendingRecord));
         localStorage.setItem(`flashmind_pending_email_${email}`, JSON.stringify(pendingRecord));
 
+        // Dispatch real email via serverless API
+        try {
+          await fetch('/api/send-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, name, activationUrl }),
+          });
+        } catch (e) {
+          console.warn('Send verification API call error:', e);
+        }
+
         setPendingVerification({
           user,
           activationUrl,
@@ -110,23 +122,35 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
     }
   };
 
-  const handleCopyActivationLink = () => {
+  const handleResendEmail = async () => {
     if (!pendingVerification) return;
-    navigator.clipboard.writeText(pendingVerification.activationUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    setIsResending(true);
+    try {
+      await fetch('/api/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: pendingVerification.user.email,
+          name: pendingVerification.user.name,
+          activationUrl: pendingVerification.activationUrl,
+        }),
+      });
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 3000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsResending(false);
+    }
   };
 
-  const handleActivateImmediately = async () => {
-    if (!pendingVerification) return;
-    const { user } = pendingVerification;
-    await appDB.saveUser(user);
-    if (cloudDB.isCloudConfigured()) {
-      await cloudDB.syncUserToCloud(user);
-    }
-    onLogin(user, true);
-    setPendingVerification(null);
-    onClose();
+  const getMailProviderUrl = (email: string): string => {
+    const domain = email.split('@')[1] || '';
+    if (domain.includes('gmail')) return 'https://mail.google.com';
+    if (domain.includes('yandex') || domain.includes('ya.ru')) return 'https://mail.yandex.ru';
+    if (domain.includes('mail.ru') || domain.includes('bk.ru') || domain.includes('inbox.ru')) return 'https://e.mail.ru';
+    if (domain.includes('outlook') || domain.includes('hotmail')) return 'https://outlook.live.com';
+    return 'https://mail.google.com';
   };
 
   const handleLogoutClick = () => {
@@ -173,64 +197,64 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
           </button>
         </div>
 
-        {/* Email Verification Pending Screen */}
+        {/* Email Verification Pending Screen (Strict - Requires opening email link) */}
         {pendingVerification ? (
           <div className="space-y-6 text-center">
             <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/20 animate-pulse">
-              <MailCheck className="w-8 h-8" />
+              <MailCheck className="w-8 h-8 text-indigo-400" />
             </div>
 
             <div className="space-y-2">
               <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-semibold">
-                ✉️ Ожидает подтверждения
+                ✉️ Письмо отправлено на Ваш Email
               </span>
               <h4 className="text-xl font-bold text-white pt-1">
-                Ссылка подтверждения отправлена!
+                Проверьте вашу почту
               </h4>
               <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
-                Мы выслали ссылку для подтверждения на <strong className="text-indigo-300">{pendingVerification.user.email}</strong>. Нажмите на нее, чтобы подтвердить Email и войти в кабинет.
+                Мы выслали ссылку для активации аккаунта на <strong className="text-indigo-300">{pendingVerification.user.email}</strong>. Перейдите в ваш почтовый ящик и кликните ссылку в письме.
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 text-left">
-              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                Персональная ссылка активации:
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={pendingVerification.activationUrl}
-                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopyActivationLink}
-                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
-                >
-                  {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedLink ? 'Скопировано' : 'Копия'}</span>
-                </button>
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 text-xs text-slate-400 space-y-2 text-left leading-relaxed">
+              <div className="flex items-center gap-2 text-indigo-300 font-semibold">
+                <span>🛡️ Защищенный вход:</span>
               </div>
+              <p>
+                Без перехода по ссылке из письма регистрация не будет завершена, а личный кабинет останется недоступным.
+              </p>
             </div>
 
-            <div className="flex flex-col gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={handleActivateImmediately}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer"
+            <div className="flex flex-col gap-3 pt-2">
+              <a
+                href={getMailProviderUrl(pendingVerification.user.email)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ExternalLink className="w-4 h-4" />
-                <span>Перейти по ссылке подтверждения (Завершить)</span>
-              </button>
+                <span>Открыть почтовый ящик</span>
+              </a>
 
-              <button
-                type="button"
-                onClick={() => setPendingVerification(null)}
-                className="text-xs text-slate-400 hover:text-slate-200 py-1"
-              >
-                ← Вернуться назад
-              </button>
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={isResending}
+                  className="text-indigo-400 hover:underline font-medium inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isResending ? 'animate-spin' : ''}`} />
+                  <span>{resendSuccess ? 'Письмо отправлено!' : 'Отправить письмо повторно'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPendingVerification(null)}
+                  className="text-slate-400 hover:text-slate-200"
+                >
+                  ← Изменить Email
+                </button>
+              </div>
             </div>
           </div>
         ) : currentUser ? (
@@ -340,10 +364,10 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Обработка...</span>
+                  <span>Отправка письма...</span>
                 </>
               ) : (
-                <span>{isRegisterMode ? 'Отправить ссылку подтверждения' : 'Войти в кабинет'}</span>
+                <span>{isRegisterMode ? 'Зарегистрироваться и получить письмо' : 'Войти в кабинет'}</span>
               )}
             </button>
 
