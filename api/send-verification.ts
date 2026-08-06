@@ -48,11 +48,11 @@ export default async function handler(req: any, res: any) {
     </html>
   `;
 
-  // 1. Option A: Send via Brevo (Sendinblue) REST API (300 free emails/day to ANY address)
-  const brevoApiKey = process.env.BREVO_API_KEY;
+  // 1. Option A: Send via Brevo (Sendinblue) REST API
+  const brevoApiKey = (process.env.BREVO_API_KEY || '').trim();
   if (brevoApiKey) {
     try {
-      const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@flashmind.app';
+      const senderEmail = (process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || email).trim();
       const senderName = process.env.BREVO_SENDER_NAME || 'FlashMind AI';
 
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -73,6 +73,7 @@ export default async function handler(req: any, res: any) {
       const data = await response.json();
 
       if (!response.ok) {
+        console.error('Brevo API Error Details:', data);
         return res.status(200).json({
           success: false,
           error: data.message || 'Brevo API Error',
@@ -157,6 +158,6 @@ export default async function handler(req: any, res: any) {
 
   return res.status(200).json({
     success: false,
-    error: 'Почтовый сервис не настроен на Vercel. Добавьте BREVO_API_KEY, SMTP_USER/SMTP_PASS или RESEND_API_KEY.',
+    error: 'Почтовый сервис подключается в Vercel.',
   });
 }

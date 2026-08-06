@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Mail, Calendar, X, Loader2, MailCheck, ExternalLink, RefreshCw, AlertCircle, Check, Copy } from 'lucide-react';
+import { User, LogOut, Mail, Calendar, X, Loader2, MailCheck, ExternalLink, RefreshCw, Copy } from 'lucide-react';
 import { appDB } from '../db/database';
 import { cloudDB } from '../db/cloudDatabase';
 
@@ -158,18 +158,6 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
     }
   };
 
-  const handleActivateManualFallback = async () => {
-    if (!pendingVerification) return;
-    const { user } = pendingVerification;
-    await appDB.saveUser(user);
-    if (cloudDB.isCloudConfigured()) {
-      await cloudDB.syncUserToCloud(user);
-    }
-    onLogin(user, true);
-    setPendingVerification(null);
-    onClose();
-  };
-
   const handleCopyActivationLink = () => {
     if (!pendingVerification) return;
     navigator.clipboard.writeText(pendingVerification.activationUrl);
@@ -238,50 +226,25 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-semibold">
-                ✉️ Запрос на отправку письма сформирован
+              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-xs font-semibold">
+                ✉️ Письмо отправлено на Ваш Email
               </span>
               <h4 className="text-xl font-bold text-white pt-1">
                 Проверьте вашу почту
               </h4>
               <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
-                Запрос отправлен на <strong className="text-indigo-300">{pendingVerification.user.email}</strong>. Зайдите в ваш почтовый ящик и нажмите на синюю ссылку активации.
+                Мы отправили ссылку для активации аккаунта на <strong className="text-indigo-300">{pendingVerification.user.email}</strong>. Перейдите в почтовый ящик и кликните на ссылку в письме.
               </p>
             </div>
 
-            {/* Resend Free Tier Domain Limitation Info Box */}
-            {pendingVerification.dispatchError && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 text-left space-y-2 leading-relaxed">
-                <div className="flex items-center gap-2 font-bold text-amber-300">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>Примечание по отправке Resend API:</span>
-                </div>
-                <p>
-                  В тестовом бесплатном тарифе Resend письма рассылаются <strong>только на ваш основной Email, с которого зарегистрирован аккаунт Resend</strong> ({pendingVerification.dispatchError}).
-                </p>
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={handleActivateManualFallback}
-                    className="w-full py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold border border-amber-500/30 transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
-                  >
-                    <Check className="w-4 h-4 text-emerald-400" />
-                    <span>Подтвердить данный аккаунт прямо сейчас</span>
-                  </button>
-                </div>
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 text-xs text-slate-400 space-y-2 text-left leading-relaxed">
+              <div className="flex items-center gap-2 text-indigo-300 font-semibold">
+                <span>🛡️ Защищенный вход:</span>
               </div>
-            )}
-
-            {!pendingVerification.dispatchError && (
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 text-xs text-slate-400 space-y-2 text-left leading-relaxed">
-                <div className="flex items-center gap-2 text-indigo-300 font-semibold">
-                  <span>🛡️ Защищенный вход:</span>
-                </div>
-                <p>
-                  Перейдите в почтовый ящик и кликните по ссылке из письма для активации аккаунта.
-                </p>
-              </div>
-            )}
+              <p>
+                Перейдите в почтовый ящик и кликните по ссылке из письма для активации аккаунта.
+              </p>
+            </div>
 
             <div className="flex flex-col gap-3 pt-2">
               <a
