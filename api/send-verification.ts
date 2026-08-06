@@ -19,7 +19,14 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Email and activationUrl are required' });
   }
 
-  const resendApiKey = process.env.RESEND_API_KEY || 're_default_key';
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    return res.status(200).json({
+      success: false,
+      error: 'RESEND_API_KEY environment variable is missing on Vercel.',
+    });
+  }
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -49,32 +56,34 @@ export default async function handler(req: any, res: any) {
   `;
 
   try {
-    // Try sending via Resend REST API if key configured
-    if (process.env.RESEND_API_KEY) {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'FlashMind AI <onboarding@resend.dev>',
-          to: [email],
-          subject: '✉️ Подтверждение регистрации в FlashMind AI',
-          html: htmlContent,
-        }),
-      });
+    const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
-      const data = await response.json();
-      return res.status(200).json({ success: true, resend: data });
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `FlashMind AI <${fromAddress}>`,
+        to: [email],
+        subject: '✉️ Подтверждение регистрации в FlashMind AI',
+        html: htmlContent,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Resend API returned error:', data);
+      return res.status(200).json({
+        success: false,
+        error: data.message || 'Resend error',
+        details: data,
+      });
     }
 
-    // Fallback response acknowledging verification dispatch
-    return res.status(200).json({
-      success: true,
-      message: 'Verification dispatch scheduled',
-      sentTo: email,
-    });
+    return res.status(200).json({ success: true, resend: data });
   } catch (err: any) {
     console.error('Email Dispatch Error:', err);
     return res.status(500).json({ error: err.message || 'Failed to dispatch email' });

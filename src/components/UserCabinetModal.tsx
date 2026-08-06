@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Mail, Calendar, X, Loader2, MailCheck, ExternalLink, RefreshCw } from 'lucide-react';
+import { User, LogOut, Mail, Calendar, X, Loader2, MailCheck, ExternalLink, RefreshCw, AlertCircle, Check, Copy } from 'lucide-react';
 import { appDB } from '../db/database';
 import { cloudDB } from '../db/cloudDatabase';
 
@@ -42,11 +42,13 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
   const [authError, setAuthError] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Verification Pending Screen State
   const [pendingVerification, setPendingVerification] = useState<{
     user: UserProfile;
     activationUrl: string;
+    dispatchError?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -91,20 +93,27 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
         localStorage.setItem(`flashmind_pending_${token}`, JSON.stringify(pendingRecord));
         localStorage.setItem(`flashmind_pending_email_${email}`, JSON.stringify(pendingRecord));
 
+        let dispatchErrorMsg = '';
+
         // Dispatch real email via serverless API
         try {
-          await fetch('/api/send-verification', {
+          const res = await fetch('/api/send-verification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, name, activationUrl }),
           });
-        } catch (e) {
+          const data = await res.json();
+          if (!data.success && data.error) {
+            dispatchErrorMsg = data.error;
+          }
+        } catch (e: any) {
           console.warn('Send verification API call error:', e);
         }
 
         setPendingVerification({
           user,
           activationUrl,
+          dispatchError: dispatchErrorMsg,
         });
       } else {
         // Sign in mode: Strict check that user profile exists in database
@@ -126,7 +135,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
     if (!pendingVerification) return;
     setIsResending(true);
     try {
-      await fetch('/api/send-verification', {
+      const res = await fetch('/api/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -135,13 +144,37 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
           activationUrl: pendingVerification.activationUrl,
         }),
       });
-      setResendSuccess(true);
-      setTimeout(() => setResendSuccess(false), 3000);
+      const data = await res.json();
+      if (!data.success && data.error) {
+        setPendingVerification((prev) => (prev ? { ...prev, dispatchError: data.error } : null));
+      } else {
+        setResendSuccess(true);
+        setTimeout(() => setResendSuccess(false), 3000);
+      }
     } catch (e) {
       console.error(e);
     } finally {
       setIsResending(false);
     }
+  };
+
+  const handleActivateManualFallback = async () => {
+    if (!pendingVerification) return;
+    const { user } = pendingVerification;
+    await appDB.saveUser(user);
+    if (cloudDB.isCloudConfigured()) {
+      await cloudDB.syncUserToCloud(user);
+    }
+    onLogin(user, true);
+    setPendingVerification(null);
+    onClose();
+  };
+
+  const handleCopyActivationLink = () => {
+    if (!pendingVerification) return;
+    navigator.clipboard.writeText(pendingVerification.activationUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const getMailProviderUrl = (email: string): string => {
@@ -197,7 +230,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
           </button>
         </div>
 
-        {/* Email Verification Pending Screen (Strict - Requires opening email link) */}
+        {/* Email Verification Pending Screen */}
         {pendingVerification ? (
           <div className="space-y-6 text-center">
             <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/20 animate-pulse">
@@ -206,24 +239,49 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
 
             <div className="space-y-2">
               <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 text-xs font-semibold">
-                ✉️ Письмо отправлено на Ваш Email
+                ✉️ Запрос на отправку письма сформирован
               </span>
               <h4 className="text-xl font-bold text-white pt-1">
                 Проверьте вашу почту
               </h4>
               <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
-                Мы выслали ссылку для активации аккаунта на <strong className="text-indigo-300">{pendingVerification.user.email}</strong>. Перейдите в ваш почтовый ящик и кликните ссылку в письме.
+                Запрос отправлен на <strong className="text-indigo-300">{pendingVerification.user.email}</strong>. Зайдите в ваш почтовый ящик и нажмите на синюю ссылку активации.
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 text-xs text-slate-400 space-y-2 text-left leading-relaxed">
-              <div className="flex items-center gap-2 text-indigo-300 font-semibold">
-                <span>🛡️ Защищенный вход:</span>
+            {/* Resend Free Tier Domain Limitation Info Box */}
+            {pendingVerification.dispatchError && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 text-left space-y-2 leading-relaxed">
+                <div className="flex items-center gap-2 font-bold text-amber-300">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Примечание по отправке Resend API:</span>
+                </div>
+                <p>
+                  В тестовом бесплатном тарифе Resend письма рассылаются <strong>только на ваш основной Email, с которого зарегистрирован аккаунт Resend</strong> ({pendingVerification.dispatchError}).
+                </p>
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleActivateManualFallback}
+                    className="w-full py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold border border-amber-500/30 transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>Подтвердить данный аккаунт прямо сейчас</span>
+                  </button>
+                </div>
               </div>
-              <p>
-                Без перехода по ссылке из письма регистрация не будет завершена, а личный кабинет останется недоступным.
-              </p>
-            </div>
+            )}
+
+            {!pendingVerification.dispatchError && (
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 text-xs text-slate-400 space-y-2 text-left leading-relaxed">
+                <div className="flex items-center gap-2 text-indigo-300 font-semibold">
+                  <span>🛡️ Защищенный вход:</span>
+                </div>
+                <p>
+                  Перейдите в почтовый ящик и кликните по ссылке из письма для активации аккаунта.
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-3 pt-2">
               <a
@@ -233,10 +291,19 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
                 className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ExternalLink className="w-4 h-4" />
-                <span>Открыть почтовый ящик</span>
+                <span>Открыть почтовый ящик ({pendingVerification.user.email.split('@')[1]})</span>
               </a>
 
               <div className="flex items-center justify-between pt-1 text-xs">
+                <button
+                  type="button"
+                  onClick={handleCopyActivationLink}
+                  className="text-slate-400 hover:text-white inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedLink ? 'Ссылка скопирована' : 'Скопировать ссылку'}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleResendEmail}
@@ -244,15 +311,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
                   className="text-indigo-400 hover:underline font-medium inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isResending ? 'animate-spin' : ''}`} />
-                  <span>{resendSuccess ? 'Письмо отправлено!' : 'Отправить письмо повторно'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPendingVerification(null)}
-                  className="text-slate-400 hover:text-slate-200"
-                >
-                  ← Изменить Email
+                  <span>{resendSuccess ? 'Письмо отправлено!' : 'Отправить повторно'}</span>
                 </button>
               </div>
             </div>
