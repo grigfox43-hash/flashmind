@@ -63,6 +63,13 @@ class CloudDatabaseService {
     const cleanUrl = supabaseUrl.replace(/\/$/, '');
 
     try {
+      const payload = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        joined_at: user.joinedAt,
+      };
+
       await fetch(`${cleanUrl}/rest/v1/users`, {
         method: 'POST',
         headers: {
@@ -71,7 +78,7 @@ class CloudDatabaseService {
           Authorization: `Bearer ${supabaseAnonKey}`,
           Prefer: 'resolution=merge-duplicates',
         },
-        body: JSON.stringify(user),
+        body: JSON.stringify(payload),
       });
     } catch (e) {
       console.error('Cloud Sync User error:', e);
@@ -83,6 +90,8 @@ class CloudDatabaseService {
    */
   async syncDecksToCloud(decks: Deck[], userId: string = 'default'): Promise<void> {
     if (!this.isCloudConfigured()) return;
+    if (!decks || decks.length === 0) return;
+
     const { supabaseUrl, supabaseAnonKey } = this.getSettings();
     const cleanUrl = supabaseUrl.replace(/\/$/, '');
 
