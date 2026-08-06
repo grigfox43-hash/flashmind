@@ -34,7 +34,7 @@ class CloudDatabaseService {
     return {
       supabaseUrl: finalUrl,
       supabaseAnonKey: finalKey,
-      isEnabled: savedSettings.isEnabled || Boolean(finalUrl && finalKey),
+      isEnabled: true, // Always active for Vercel MongoDB Atlas API & Cloud DB
     };
   }
 
@@ -43,14 +43,19 @@ class CloudDatabaseService {
   }
 
   isCloudConfigured(): boolean {
-    const s = this.getSettings();
-    return Boolean(s.supabaseUrl) && Boolean(s.supabaseAnonKey);
+    return true; // Active on Vercel MongoDB Atlas & Serverless API
   }
 
   /**
-   * Test connection to Remote Supabase / Cloud PostgreSQL Database
+   * Test connection to Remote Cloud Database / MongoDB Atlas
    */
   async testCloudConnection(url: string, key: string): Promise<boolean> {
+    try {
+      // Test Vercel MongoDB API
+      const res = await fetch('/api/users', { method: 'GET' });
+      if (res.ok) return true;
+    } catch (e) {}
+
     if (!url || !key) return false;
     try {
       const cleanUrl = url.replace(/\/$/, '');
@@ -69,107 +74,177 @@ class CloudDatabaseService {
   }
 
   /**
-   * Sync User Profile to Cloud DB
+   * Sync User Profile to MongoDB Atlas & Cloud DB
    */
   async syncUserToCloud(user: UserProfile): Promise<void> {
-    if (!this.isCloudConfigured()) return;
-    const { supabaseUrl, supabaseAnonKey } = this.getSettings();
-    const cleanUrl = supabaseUrl.replace(/\/$/, '');
-
+    // 1. Send to Vercel MongoDB API
     try {
-      const payload = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        joined_at: user.joinedAt,
-      };
-
-      await fetch(`${cleanUrl}/rest/v1/users`, {
+      await fetch('/api/users', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${supabaseAnonKey}`,
-          Prefer: 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user),
       });
     } catch (e) {
-      console.error('Cloud Sync User error:', e);
+      console.warn('Vercel API user sync fallback:', e);
+    }
+
+    // 2. Send to REST endpoint if configured
+    const { supabaseUrl, supabaseAnonKey } = this.getSettings();
+    if (supabaseUrl && supabaseAnonKey) {
+      const cleanUrl = supabaseUrl.replace(/\/$/, '');
+      try {
+        const payload = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          joined_at: user.joinedAt,
+        };
+
+        await fetch(`${cleanUrl}/rest/v1/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+            Prefer: 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (e) {
+        console.error('Cloud Sync User error:', e);
+      }
     }
   }
 
   /**
-   * Sync Decks & Cards to Cloud DB
+   * Fetch User Profile by email from MongoDB Atlas / Cloud DB
+   */
+  async getUserByEmailFromCloud(email: string): Promise<UserProfile | null> {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Try Vercel MongoDB API first
+    try {
+      const res = await fetch(`/api/users?email=${encodeURIComponent(cleanEmail)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.email) {
+          return {
+            id: data.id || `usr_${Date.now()}`,
+            name: data.name || cleanEmail.split('@')[0],
+            email: data.email,
+            joinedAt: data.joinedAt || data.joined_at || new Date().toLocaleDateString('ru-RU'),
+          };
+        }
+      }
+    } catch (e) {}
+
+    return null;
+  }
+
+  /**
+   * Sync Decks & Cards to MongoDB Atlas & Cloud DB
    */
   async syncDecksToCloud(decks: Deck[], userId: string = 'default'): Promise<void> {
-    if (!this.isCloudConfigured()) return;
     if (!decks || decks.length === 0) return;
 
-    const { supabaseUrl, supabaseAnonKey } = this.getSettings();
-    const cleanUrl = supabaseUrl.replace(/\/$/, '');
-
+    // 1. Send to Vercel MongoDB API
     try {
-      const payload = decks.map((d) => ({
-        id: d.id,
-        user_id: userId,
-        title: d.title,
-        description: d.description,
-        category: d.category,
-        color: d.color,
-        cards_json: JSON.stringify(d.cards),
-        updated_at: new Date().toISOString(),
-      }));
-
-      await fetch(`${cleanUrl}/rest/v1/decks`, {
+      await fetch('/api/decks', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${supabaseAnonKey}`,
-          Prefer: 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decks, userId }),
       });
     } catch (e) {
-      console.error('Cloud Sync Decks error:', e);
+      console.warn('Vercel API decks sync fallback:', e);
+    }
+
+    // 2. Send to REST endpoint if configured
+    const { supabaseUrl, supabaseAnonKey } = this.getSettings();
+    if (supabaseUrl && supabaseAnonKey) {
+      const cleanUrl = supabaseUrl.replace(/\/$/, '');
+      try {
+        const payload = decks.map((d) => ({
+          id: d.id,
+          user_id: userId,
+          title: d.title,
+          description: d.description,
+          category: d.category,
+          color: d.color,
+          cards_json: JSON.stringify(d.cards),
+          updated_at: new Date().toISOString(),
+        }));
+
+        await fetch(`${cleanUrl}/rest/v1/decks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+            Prefer: 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (e) {
+        console.error('Cloud Sync Decks error:', e);
+      }
     }
   }
 
   /**
-   * Fetch All Decks from Cloud DB
+   * Fetch All Decks from MongoDB Atlas / Cloud DB
    */
-  async fetchDecksFromCloud(_userId: string = 'default'): Promise<Deck[] | null> {
-    if (!this.isCloudConfigured()) return null;
-    const { supabaseUrl, supabaseAnonKey } = this.getSettings();
-    const cleanUrl = supabaseUrl.replace(/\/$/, '');
-
+  async fetchDecksFromCloud(userId: string = 'default'): Promise<Deck[] | null> {
+    // 1. Try Vercel MongoDB API
     try {
-      const res = await fetch(`${cleanUrl}/rest/v1/decks?select=*`, {
-        method: 'GET',
-        headers: {
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${supabaseAnonKey}`,
-        },
-      });
+      const res = await fetch(`/api/decks?userId=${encodeURIComponent(userId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((row: any) => ({
+            id: row.id,
+            title: row.title,
+            description: row.description || '',
+            category: row.category || 'Общее',
+            color: row.color || 'from-indigo-500/20 to-purple-600/20 text-indigo-400 border-indigo-500/30',
+            createdAt: row.createdAt || new Date().toISOString().split('T')[0],
+            cards: row.cards || [],
+          }));
+        }
+      }
+    } catch (e) {}
 
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (!Array.isArray(data)) return null;
+    // 2. Try REST endpoint
+    const { supabaseUrl, supabaseAnonKey } = this.getSettings();
+    if (supabaseUrl && supabaseAnonKey) {
+      const cleanUrl = supabaseUrl.replace(/\/$/, '');
+      try {
+        const res = await fetch(`${cleanUrl}/rest/v1/decks?select=*`, {
+          method: 'GET',
+          headers: {
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+        });
 
-      return data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        description: row.description || '',
-        category: row.category || 'Общее',
-        color: row.color || 'from-indigo-500/20 to-purple-600/20 text-indigo-400 border-indigo-500/30',
-        createdAt: row.created_at || new Date().toISOString().split('T')[0],
-        cards: typeof row.cards_json === 'string' ? JSON.parse(row.cards_json) : row.cards_json || [],
-      }));
-    } catch (e) {
-      console.error('Fetch Cloud Decks error:', e);
-      return null;
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!Array.isArray(data)) return null;
+
+        return data.map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description || '',
+          category: row.category || 'Общее',
+          color: row.color || 'from-indigo-500/20 to-purple-600/20 text-indigo-400 border-indigo-500/30',
+          createdAt: row.created_at || new Date().toISOString().split('T')[0],
+          cards: typeof row.cards_json === 'string' ? JSON.parse(row.cards_json) : row.cards_json || [],
+        }));
+      } catch (e) {
+        console.error('Fetch Cloud Decks error:', e);
+      }
     }
+
+    return null;
   }
 }
 

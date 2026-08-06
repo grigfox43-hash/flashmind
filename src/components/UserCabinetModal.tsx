@@ -56,7 +56,9 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
 
     try {
       const email = emailInput.trim().toLowerCase();
-      const existing = await appDB.getUserByEmail(email);
+      const existingLocal = await appDB.getUserByEmail(email);
+      const existingCloud = await cloudDB.getUserByEmailFromCloud(email);
+      const existing = existingLocal || existingCloud;
 
       if (isRegisterMode) {
         if (existing) {
