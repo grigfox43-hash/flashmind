@@ -1,3 +1,5 @@
+import nodemailer from 'nodemailer';
+
 export default async function handler(req: any, res: any) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -17,15 +19,6 @@ export default async function handler(req: any, res: any) {
 
   if (!email || !activationUrl) {
     return res.status(400).json({ error: 'Email and activationUrl are required' });
-  }
-
-  const apiKey = process.env.RESEND_API_KEY;
-
-  if (!apiKey) {
-    return res.status(200).json({
-      success: false,
-      error: 'RESEND_API_KEY environment variable is missing on Vercel.',
-    });
   }
 
   const htmlContent = `
@@ -55,37 +48,77 @@ export default async function handler(req: any, res: any) {
     </html>
   `;
 
-  try {
-    const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  // 1. Option A: Send via Universal Free SMTP (Yandex / Mail.ru / Gmail)
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpHost = process.env.SMTP_HOST || 'smtp.yandex.ru';
+  const smtpPort = Number(process.env.SMTP_PORT) || 465;
 
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: `FlashMind AI <${fromAddress}>`,
-        to: [email],
+  if (smtpUser && smtpPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      await transporter.sendMail({
+        from: `"FlashMind AI" <${smtpUser}>`,
+        to: email,
         subject: '✉️ Подтверждение регистрации в FlashMind AI',
         html: htmlContent,
-      }),
-    });
+      });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Resend API returned error:', data);
+      return res.status(200).json({ success: true, provider: 'smtp' });
+    } catch (err: any) {
+      console.error('SMTP Dispatch Error:', err);
       return res.status(200).json({
         success: false,
-        error: data.message || 'Resend error',
-        details: data,
+        error: `SMTP Error: ${err.message}`,
       });
     }
-
-    return res.status(200).json({ success: true, resend: data });
-  } catch (err: any) {
-    console.error('Email Dispatch Error:', err);
-    return res.status(500).json({ error: err.message || 'Failed to dispatch email' });
   }
+
+  // 2. Option B: Send via Resend REST API
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey) {
+    try {
+      const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `FlashMind AI <${fromAddress}>`,
+          to: [email],
+          subject: '✉️ Подтверждение регистрации в FlashMind AI',
+          html: htmlContent,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(200).json({
+          success: false,
+          error: data.message || 'Resend API Restriction',
+        });
+      }
+
+      return res.status(200).json({ success: true, provider: 'resend', data });
+    } catch (err: any) {
+      return res.status(200).json({ success: false, error: err.message });
+    }
+  }
+
+  return res.status(200).json({
+    success: false,
+    error: 'Почтовый сервер еще не настроен в Vercel. Добавьте SMTP_USER / SMTP_PASS (Яндекс/Mail.ru) или RESEND_API_KEY.',
+  });
 }
