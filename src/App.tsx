@@ -55,6 +55,35 @@ export function App() {
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [welcomeUser, setWelcomeUser] = useState<UserProfile | null>(null);
 
+  // Email Verification Token Link Listener (?verifyToken=...)
+  useEffect(() => {
+    async function checkVerificationToken() {
+      const params = new URLSearchParams(window.location.search);
+      const verifyToken = params.get('verifyToken');
+
+      if (verifyToken) {
+        try {
+          const raw = localStorage.getItem(`flashmind_pending_${verifyToken}`);
+          if (raw) {
+            const { user } = JSON.parse(raw);
+            await appDB.saveUser(user);
+            if (cloudDB.isCloudConfigured()) {
+              await cloudDB.syncUserToCloud(user);
+            }
+
+            localStorage.removeItem(`flashmind_pending_${verifyToken}`);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            handleLogin(user, true);
+          }
+        } catch (e) {
+          console.error('Email verification error:', e);
+        }
+      }
+    }
+
+    checkVerificationToken();
+  }, []);
+
   // 1. Initial Database Loading
   useEffect(() => {
     async function loadDatabase() {
