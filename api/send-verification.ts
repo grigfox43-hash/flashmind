@@ -48,7 +48,45 @@ export default async function handler(req: any, res: any) {
     </html>
   `;
 
-  // 1. Option A: Send via Universal Free SMTP (Yandex / Mail.ru / Gmail)
+  // 1. Option A: Send via Brevo (Sendinblue) REST API (300 free emails/day to ANY address)
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  if (brevoApiKey) {
+    try {
+      const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@flashmind.app';
+      const senderName = process.env.BREVO_SENDER_NAME || 'FlashMind AI';
+
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': brevoApiKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email: email, name: name || 'Студент' }],
+          subject: '✉️ Подтверждение регистрации в FlashMind AI',
+          htmlContent: htmlContent,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(200).json({
+          success: false,
+          error: data.message || 'Brevo API Error',
+        });
+      }
+
+      return res.status(200).json({ success: true, provider: 'brevo', data });
+    } catch (err: any) {
+      console.error('Brevo API Error:', err);
+      return res.status(200).json({ success: false, error: err.message });
+    }
+  }
+
+  // 2. Option B: Send via Universal Free SMTP (Yandex / Mail.ru / Gmail)
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
   const smtpHost = process.env.SMTP_HOST || 'smtp.yandex.ru';
@@ -83,7 +121,7 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // 2. Option B: Send via Resend REST API
+  // 3. Option C: Send via Resend REST API
   const resendApiKey = process.env.RESEND_API_KEY;
   if (resendApiKey) {
     try {
@@ -119,6 +157,6 @@ export default async function handler(req: any, res: any) {
 
   return res.status(200).json({
     success: false,
-    error: 'Почтовый сервер еще не настроен в Vercel. Добавьте SMTP_USER / SMTP_PASS (Яндекс/Mail.ru) или RESEND_API_KEY.',
+    error: 'Почтовый сервис не настроен на Vercel. Добавьте BREVO_API_KEY, SMTP_USER/SMTP_PASS или RESEND_API_KEY.',
   });
 }
