@@ -237,6 +237,9 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
               <p>
                 Перейдите в почтовый ящик и кликните по ссылке из письма для активации аккаунта.
               </p>
+              <p className="text-[11px] text-slate-500 border-t border-slate-800/60 pt-2">
+                💡 <strong>Совет:</strong> Если письмо не появилось во «Входящих», проверьте папку <strong>«Спам»</strong> или <strong>«Промоакции»</strong> (автоматические письма иногда попадают туда).
+              </p>
             </div>
 
             <div className="flex flex-col gap-3 pt-2">
