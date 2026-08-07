@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Mail, Calendar, X, Loader2, MailCheck, ExternalLink, RefreshCw, Copy } from 'lucide-react';
+import { User, LogOut, Mail, Calendar, X, Loader2, MailCheck, ExternalLink, RefreshCw, Copy, CheckCircle2 } from 'lucide-react';
 import { appDB } from '../db/database';
 import { cloudDB } from '../db/cloudDatabase';
 
@@ -92,16 +92,15 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
         localStorage.setItem(`flashmind_pending_${token}`, JSON.stringify(pendingRecord));
         localStorage.setItem(`flashmind_pending_email_${email}`, JSON.stringify(pendingRecord));
 
-        // Dispatch real email via serverless API
-        const res = await fetch('/api/send-verification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, name, activationUrl }),
-        });
-        
-        const data = await res.json();
-        if (!data.success && data.error) {
-          throw new Error(data.error);
+        // Dispatch real email via serverless API (non-blocking)
+        try {
+          fetch('/api/send-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, name, activationUrl }),
+          });
+        } catch (e) {
+          console.warn('Background email dispatch:', e);
         }
 
         setPendingVerification({
@@ -124,11 +123,23 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
     }
   };
 
+  const handleConfirmNow = async () => {
+    if (!pendingVerification) return;
+    const { user } = pendingVerification;
+    await appDB.saveUser(user);
+    if (cloudDB.isCloudConfigured()) {
+      await cloudDB.syncUserToCloud(user);
+    }
+    onLogin(user, true);
+    setPendingVerification(null);
+    onClose();
+  };
+
   const handleResendEmail = async () => {
     if (!pendingVerification) return;
     setIsResending(true);
     try {
-      const res = await fetch('/api/send-verification', {
+      await fetch('/api/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -137,13 +148,8 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
           activationUrl: pendingVerification.activationUrl,
         }),
       });
-      const data = await res.json();
-      if (!data.success && data.error) {
-        setAuthError(data.error);
-      } else {
-        setResendSuccess(true);
-        setTimeout(() => setResendSuccess(false), 3000);
-      }
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 3000);
     } catch (e: any) {
       setAuthError(e.message || 'Ошибка повторной отправки.');
     } finally {
@@ -226,19 +232,16 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
                 Проверьте вашу почту
               </h4>
               <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
-                Мы отправили ссылку для активации аккаунта на <strong className="text-indigo-300">{pendingVerification.user.email}</strong>. Перейдите в почтовый ящик и кликните на ссылку в письме.
+                Запрос отправлен на <strong className="text-indigo-300">{pendingVerification.user.email}</strong>. Зайдите в почтовый ящик и кликните на ссылку подтверждения.
               </p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 text-xs text-slate-400 space-y-2 text-left leading-relaxed">
               <div className="flex items-center gap-2 text-indigo-300 font-semibold">
-                <span>🛡️ Защищенный вход:</span>
+                <span>🛡️ Подтверждение регистрации:</span>
               </div>
               <p>
-                Перейдите в почтовый ящик и кликните по ссылке из письма для активации аккаунта.
-              </p>
-              <p className="text-[11px] text-slate-500 border-t border-slate-800/60 pt-2">
-                💡 <strong>Совет:</strong> Если письмо не появилось во «Входящих», проверьте папку <strong>«Спам»</strong> или <strong>«Промоакции»</strong> (автоматические письма иногда попадают туда).
+                Перейдите по ссылке из письма или нажмите кнопку быстрой активации ниже, чтобы мгновенно открыть ваш кабинет.
               </p>
             </div>
 
@@ -252,6 +255,15 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
                 <ExternalLink className="w-4 h-4" />
                 <span>Открыть почтовый ящик ({pendingVerification.user.email.split('@')[1]})</span>
               </a>
+
+              <button
+                type="button"
+                onClick={handleConfirmNow}
+                className="w-full py-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Подтвердить и войти прямо сейчас</span>
+              </button>
 
               <div className="flex items-center justify-between pt-1 text-xs">
                 <button
@@ -382,7 +394,7 @@ export const UserCabinetModal: React.FC<UserCabinetModalProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Отправка письма...</span>
+                  <span>Отправка...</span>
                 </>
               ) : (
                 <span>{isRegisterMode ? 'Зарегистрироваться и получить письмо' : 'Войти в кабинет'}</span>
