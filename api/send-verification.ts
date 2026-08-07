@@ -52,8 +52,36 @@ export default async function handler(req: any, res: any) {
   const brevoApiKey = (process.env.BREVO_API_KEY || '').trim();
   if (brevoApiKey) {
     try {
-      const senderEmail = (process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || email).trim();
+      let verifiedSender = (process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || '').trim();
       const senderName = process.env.BREVO_SENDER_NAME || 'FlashMind AI';
+
+      // Automatically fetch verified sender email from user's Brevo account if not explicitly set
+      if (!verifiedSender) {
+        try {
+          const sendersRes = await fetch('https://api.brevo.com/v3/senders', {
+            method: 'GET',
+            headers: {
+              'accept': 'application/json',
+              'api-key': brevoApiKey,
+            },
+          });
+          if (sendersRes.ok) {
+            const sendersData = await sendersRes.json();
+            if (sendersData.senders && sendersData.senders.length > 0) {
+              const activeSender = sendersData.senders.find((s: any) => s.active) || sendersData.senders[0];
+              if (activeSender && activeSender.email) {
+                verifiedSender = activeSender.email.trim();
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Auto-fetch Brevo senders warning:', e);
+        }
+      }
+
+      if (!verifiedSender) {
+        verifiedSender = email;
+      }
 
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
@@ -63,7 +91,7 @@ export default async function handler(req: any, res: any) {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          sender: { name: senderName, email: senderEmail },
+          sender: { name: senderName, email: verifiedSender },
           to: [{ email: email, name: name || 'Студент' }],
           subject: '✉️ Подтверждение регистрации в FlashMind AI',
           htmlContent: htmlContent,
@@ -77,6 +105,7 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({
           success: false,
           error: data.message || 'Brevo API Error',
+          details: data,
         });
       }
 
